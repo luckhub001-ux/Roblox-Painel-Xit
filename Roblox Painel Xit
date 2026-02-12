@@ -1,0 +1,197 @@
+-- [[ 
+--    Script: Central de Combate, Visual & Movimentação 
+--    Versão: 2.3 (Com Chaves de Ativação)
+-- ]]
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "LUCK BLOXX 💎 ",
+    LoadingTitle = "Iniciando Sistemas...",
+    LoadingSubtitle = "LUCK HUB",
+    ConfigurationSaving = { Enabled = false },
+    KeySystem = false 
+})
+
+-- // Variáveis e Serviços //
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local AimbotEnabled, FOVVisible, WallCheck = false, true, true
+local FOVRadius = 100
+local ESPEnabled = false
+local ESPColor = Color3.fromRGB(0, 255, 255)
+
+-- Variáveis de Movimentação (NOVAS VARIÁVEIS DE CONTROLE)
+local WalkSpeedEnabled = false
+local WalkSpeedValue = 16
+local JumpPowerEnabled = false
+local JumpPowerValue = 50
+local FlyEnabled = false
+local FlySpeed = 50
+
+-- // FOV Circle //
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness = 1
+FOVCircle.Color = Color3.fromRGB(0, 255, 255)
+FOVCircle.Transparency = 0.7
+
+-- // Tabelas de Objetos Visuais //
+local screenElements = {}
+
+local function CreatePlayerESP(player)
+    if screenElements[player] then return end
+    screenElements[player] = {
+        Tracer = Drawing.new("Line"),
+        Box = Drawing.new("Square"),
+        Tag = Drawing.new("Text")
+    }
+    local e = screenElements[player]
+    e.Tracer.Thickness = 1
+    e.Box.Thickness = 1
+    e.Box.Filled = false
+    e.Tag.Size = 14
+    e.Tag.Center = true
+    e.Tag.Outline = true
+    e.Tag.Color = Color3.new(1, 1, 1)
+end
+
+-- // Loop Principal //
+RunService.RenderStepped:Connect(function()
+    FOVCircle.Visible = FOVVisible
+    FOVCircle.Radius = FOVRadius
+    FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+
+    -- // Lógica do Aimbot //
+    if AimbotEnabled then
+        local closest = nil
+        local dist = FOVRadius
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+                local head = p.Character.Head
+                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                
+                if onScreen then
+                    local mag = (Vector2.new(pos.X, pos.Y) - FOVCircle.Position).Magnitude
+                    if mag < dist then
+                        local rayDirection = (head.Position - Camera.CFrame.Position)
+                        local params = RaycastParams.new()
+                        params.FilterType = Enum.RaycastFilterType.Exclude
+                        params.FilterDescendantsInstances = {LocalPlayer.Character, p.Character}
+                        
+                        local result = workspace:Raycast(Camera.CFrame.Position, rayDirection, params)
+                        
+                        if not WallCheck or not result then
+                            dist = mag
+                            closest = head
+                        end
+                    end
+                end
+            end
+        end
+        if closest then 
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Position) 
+        end
+    end
+
+    -- // Lógica do ESP //
+    for player, obj in pairs(screenElements) do
+        local char = player.Character
+        if ESPEnabled and char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Head") then
+            local hrp = char.HumanoidRootPart
+            local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            
+            if onScreen then
+                local headPos = Camera:WorldToViewportPoint(char.Head.Position + Vector3.new(0, 0.5, 0))
+                local legPos = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+                local height = math.abs(headPos.Y - legPos.Y)
+                local width = height * 0.6
+
+                obj.Box.Color = ESPColor
+                obj.Tracer.Color = ESPColor
+                obj.Box.Size = Vector2.new(width, height)
+                obj.Box.Position = Vector2.new(pos.X - width/2, pos.Y - height/2)
+                obj.Box.Visible = true
+                obj.Tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                obj.Tracer.To = Vector2.new(pos.X, pos.Y + height/2)
+                obj.Tracer.Visible = true
+                obj.Tag.Text = player.Name
+                obj.Tag.Position = Vector2.new(pos.X, pos.Y - height/2 - 15)
+                obj.Tag.Visible = true
+            else
+                obj.Box.Visible = false; obj.Tracer.Visible = false; obj.Tag.Visible = false
+            end
+        else
+            obj.Box.Visible = false; obj.Tracer.Visible = false; obj.Tag.Visible = false
+        end
+    end
+
+    -- // MOVIMENTAÇÃO (Lógica corrigida com Ativadores) //
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        local hum = LocalPlayer.Character.Humanoid
+        
+        -- Só altera se o Toggle estiver ligado, senão mantém o padrão (16)
+        if WalkSpeedEnabled then
+            hum.WalkSpeed = WalkSpeedValue
+        else
+            hum.WalkSpeed = 16
+        end
+
+        -- Só altera se o Toggle estiver ligado, senão mantém o padrão (50)
+        if JumpPowerEnabled then
+            hum.UseJumpPower = true -- Garante que o jogo use JumpPower em vez de JumpHeight
+            hum.JumpPower = JumpPowerValue
+        else
+            hum.JumpPower = 50
+        end
+    end
+
+    -- // Fly System //
+    if FlyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        local moveDir = Vector3.new(0,0,0)
+        
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
+        
+        hrp.Velocity = moveDir * FlySpeed
+        if moveDir.Magnitude == 0 then hrp.Velocity = Vector3.new(0, 0.1, 0) end
+    end
+end)
+
+-- Eventos de Player
+Players.PlayerAdded:Connect(CreatePlayerESP)
+for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then CreatePlayerESP(p) end end
+
+-- // Interfaces //
+
+local MainTab = Window:CreateTab("Combate & Visual", 4483362458)
+MainTab:CreateSection("Aimbot Settings")
+MainTab:CreateToggle({ Name = "Ativar Aimbot", CurrentValue = false, Callback = function(v) AimbotEnabled = v end })
+MainTab:CreateToggle({ Name = "Wall Check (Anti-Parede)", CurrentValue = true, Callback = function(v) WallCheck = v end })
+MainTab:CreateSlider({ Name = "FOV do Aimbot", Range = {30, 800}, Increment = 10, CurrentValue = 100, Callback = function(v) FOVRadius = v end })
+MainTab:CreateSection("Visual (ESP)")
+MainTab:CreateToggle({ Name = "Ativar Visuals", CurrentValue = false, Callback = function(v) ESPEnabled = v end })
+MainTab:CreateColorPicker({ Name = "Cor do ESP", Color = Color3.fromRGB(0, 255, 255), Callback = function(v) ESPColor = v end })
+
+local MoveTab = Window:CreateTab("Movimentação", 6035067836)
+
+-- NOVAS OPÇÕES DE ATIVAR/DESATIVAR
+MoveTab:CreateSection("Velocidade")
+MoveTab:CreateToggle({ Name = "Ativar Speed Mod", CurrentValue = false, Callback = function(v) WalkSpeedEnabled = v end })
+MoveTab:CreateSlider({ Name = "WalkSpeed Value", Range = {16, 300}, Increment = 1, CurrentValue = 16, Callback = function(v) WalkSpeedValue = v end })
+
+MoveTab:CreateSection("Pulo")
+MoveTab:CreateToggle({ Name = "Ativar Jump Mod", CurrentValue = false, Callback = function(v) JumpPowerEnabled = v end })
+MoveTab:CreateSlider({ Name = "JumpPower Value", Range = {50, 500}, Increment = 1, CurrentValue = 50, Callback = function(v) JumpPowerValue = v end })
+
+MoveTab:CreateSection("Voo")
+MoveTab:CreateToggle({ Name = "Fly (Voo)", CurrentValue = false, Callback = function(v) FlyEnabled = v end })
+MoveTab:CreateSlider({ Name = "Fly Speed", Range = {10, 500}, Increment = 5, CurrentValue = 50, Callback = function(v) FlySpeed = v end })
+
+Rayfield:Notify({ Title = "Xenon V2.3", Content = "Controles de movimento adicionados!", Duration = 3 })
