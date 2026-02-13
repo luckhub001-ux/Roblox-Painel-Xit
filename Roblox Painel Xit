@@ -1,16 +1,18 @@
 -- [[ 
---    Script: Central de Combate, Visual & Movimentação 
---    Versão: 2.6 (Discord Integration Update)
+--    Script: LUCK HUB 💎
+--    Versão: 2.6 (Fluent UI Port)
 -- ]]
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
-local Window = Rayfield:CreateWindow({
-    Name = "LUCK BLOXX 💎 ",
-    LoadingTitle = "Abrindo o Painel...",
-    LoadingSubtitle = "LUCK HUB 💎", -- Alterado conforme pedido
-    ConfigurationSaving = { Enabled = false },
-    KeySystem = false 
+local Window = Fluent:CreateWindow({
+    Title = "LUCK HUB 💎",
+    SubTitle = "", -- Removido conforme pedido
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 -- // Variáveis e Serviços //
@@ -150,64 +152,68 @@ end)
 Players.PlayerAdded:Connect(CreatePlayerESP)
 for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then CreatePlayerESP(p) end end
 
--- // SEÇÃO SOCIAL (DISCORD) //
-local SocialTab = Window:CreateTab("Social 📢", 4483345998)
-SocialTab:CreateSection("Comunidade")
+-- // TABS //
+local Tabs = {
+    Main = Window:AddTab({ Title = "Combate & Visual", Icon = "crosshair" }),
+    Move = Window:AddTab({ Title = "Movimentação 🏃", Icon = "users" }),
+    Social = Window:AddTab({ Title = "Social 📢", Icon = "users" })
+}
 
-SocialTab:CreateButton({
-    Name = "Entrar No Discord (Clique)",
+--- // SEÇÃO COMBATE & VISUAL //
+Tabs.Main:AddSection("Aimbot Settings")
+
+Tabs.Main:AddToggle("AimbotToggle", {Title = "Ativar Aimbot", Default = false, Callback = function(v) AimbotEnabled = v end})
+Tabs.Main:AddToggle("FOVVisible", {Title = "Mostrar Círculo FOV", Default = true, Callback = function(v) FOVVisible = v end})
+Tabs.Main:AddToggle("WallCheck", {Title = "Wall Check (Anti-Parede)", Default = true, Callback = function(v) WallCheck = v end})
+Tabs.Main:AddSlider("FOVRadius", {Title = "FOV do Aimbot", Min = 30, Max = 800, Default = 100, Rounding = 0, Callback = function(v) FOVRadius = v end})
+
+Tabs.Main:AddSection("Visual (ESP)")
+
+Tabs.Main:AddToggle("ESPToggle", {Title = "Ativar Visuals (Box)", Default = false, Callback = function(v) ESPEnabled = v end})
+Tabs.Main:AddToggle("TracerToggle", {Title = "Mostrar Linhas (Tracers)", Default = true, Callback = function(v) ShowTracers = v end})
+Tabs.Main:AddToggle("NamesToggle", {Title = "Mostrar Nomes (Nicknames)", Default = true, Callback = function(v) ShowNames = v end})
+local ColorPicker = Tabs.Main:AddColorpicker("ESPColor", {Title = "Cor do ESP", Default = Color3.fromRGB(0, 255, 255), Callback = function(v) ESPColor = v end})
+
+--- // SEÇÃO MOVIMENTAÇÃO (ORGANIZADA) //
+Tabs.Move:AddSection("Velocidade ⚡")
+Tabs.Move:AddToggle("SpeedToggle", {Title = "Ativar Speed Mod", Default = false, Callback = function(v) WalkSpeedEnabled = v end})
+Tabs.Move:AddSlider("WalkSpeed", {Title = "Velocidade de Caminhada", Min = 16, Max = 300, Default = 16, Rounding = 0, Callback = function(v) WalkSpeedValue = v end})
+
+Tabs.Move:AddSection("Pulo 🆙")
+Tabs.Move:AddToggle("JumpToggle", {Title = "Ativar Jump Mod", Default = false, Callback = function(v) JumpPowerEnabled = v end})
+Tabs.Move:AddSlider("JumpPower", {Title = "Poder do Pulo", Min = 50, Max = 500, Default = 50, Rounding = 0, Callback = function(v) JumpPowerValue = v end})
+
+Tabs.Move:AddSection("Voo ✈️")
+Tabs.Move:AddToggle("FlyToggle", {Title = "Modo Voo (Fly)", Default = false, Callback = function(v) FlyEnabled = v end})
+Tabs.Move:AddSlider("FlySpeed", {Title = "Velocidade do Voo", Min = 10, Max = 500, Default = 50, Rounding = 0, Callback = function(v) FlySpeed = v end})
+
+--- // SEÇÃO SOCIAL //
+Tabs.Social:AddSection("Comunidade")
+Tabs.Social:AddButton({
+    Title = "Entrar No Discord (Clique)",
+    Description = "Copia o link ou tenta abrir o App",
     Callback = function()
         local discordInvite = "https://discord.gg/ETzMDSwdt5"
-        
-        -- Tenta usar o request para abrir direto no App do Discord via RPC local
         local http = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
         
         if http then
             http({
                 Url = "http://127.0.0.1:6463/rpc?v=1",
                 Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json",
-                    ["Origin"] = "https://discord.com"
-                },
+                Headers = {["Content-Type"] = "application/json", ["Origin"] = "https://discord.com"},
                 Body = HttpService:JSONEncode({
                     cmd = "INVITE_BROWSER",
                     args = { code = "ETzMDSwdt5" },
                     nonce = HttpService:GenerateGUID(false)
                 })
             })
-            Rayfield:Notify({Title = "Discord", Content = "Tentando abrir convite no App...", Duration = 3})
+            Fluent:Notify({Title = "Discord", Content = "Tentando abrir convite no App...", Duration = 3})
         else
-            -- Fallback se o executor for muito simples
             setclipboard(discordInvite)
-            Rayfield:Notify({Title = "Discord", Content = "Link copiado para a área de transferência!", Duration = 5})
+            Fluent:Notify({Title = "Discord", Content = "Link copiado para a área de transferência!", Duration = 5})
         end
-    end,
+    end
 })
 
--- // Interfaces Originais //
-local MainTab = Window:CreateTab("Combate & Visual", 4483362458)
-MainTab:CreateSection("Aimbot Settings")
-MainTab:CreateToggle({ Name = "Ativar Aimbot", CurrentValue = false, Callback = function(v) AimbotEnabled = v end })
-MainTab:CreateToggle({ Name = "Mostrar Círculo FOV", CurrentValue = true, Callback = function(v) FOVVisible = v end })
-MainTab:CreateToggle({ Name = "Wall Check (Anti-Parede)", CurrentValue = true, Callback = function(v) WallCheck = v end })
-MainTab:CreateSlider({ Name = "FOV do Aimbot", Range = {30, 800}, Increment = 10, CurrentValue = 100, Callback = function(v) FOVRadius = v end })
-
-MainTab:CreateSection("Visual (ESP)")
-MainTab:CreateToggle({ Name = "Ativar Visuals (Box)", CurrentValue = false, Callback = function(v) ESPEnabled = v end })
-MainTab:CreateToggle({ Name = "Mostrar Linhas (Tracers)", CurrentValue = true, Callback = function(v) ShowTracers = v end })
-MainTab:CreateToggle({ Name = "Mostrar Nomes (Nicknames)", CurrentValue = true, Callback = function(v) ShowNames = v end })
-MainTab:CreateColorPicker({ Name = "Cor do ESP", Color = Color3.fromRGB(0, 255, 255), Callback = function(v) ESPColor = v end })
-
-local MoveTab = Window:CreateTab("Movimentação", 6035067836)
-MoveTab:CreateSection("Velocidade")
-MoveTab:CreateToggle({ Name = "Ativar Speed Mod", CurrentValue = false, Callback = function(v) WalkSpeedEnabled = v end })
-MoveTab:CreateSlider({ Name = "WalkSpeed Value", Range = {16, 300}, Increment = 1, CurrentValue = 16, Callback = function(v) WalkSpeedValue = v end })
-MoveTab:CreateSection("Pulo")
-MoveTab:CreateToggle({ Name = "Ativar Jump Mod", CurrentValue = false, Callback = function(v) JumpPowerEnabled = v end })
-MoveTab:CreateSlider({ Name = "JumpPower Value", Range = {50, 500}, Increment = 1, CurrentValue = 50, Callback = function(v) JumpPowerValue = v end })
-MoveTab:CreateSection("Voo")
-MoveTab:CreateToggle({ Name = "Fly (Voo)", CurrentValue = false, Callback = function(v) FlyEnabled = v end })
-MoveTab:CreateSlider({ Name = "Fly Speed", Range = {10, 500}, Increment = 5, CurrentValue = 50, Callback = function(v) FlySpeed = v end })
-
-Rayfield:Notify({ Title = "LUCK HUB Update", Content = "Nosso Discord, Entrem! Link adicionado na aba Social.", Duration = 5 })
+Window:SelectTab(1)
+Fluent:Notify({ Title = "LUCK HUB", Content = "Painel Fluent carregado!", Duration = 5 })
