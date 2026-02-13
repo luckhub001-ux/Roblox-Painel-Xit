@@ -1,25 +1,17 @@
 -- [[ 
---    Script: LUCK HUB 💎
---    Versão: 2.6 (Fluent UI Port)
+--    Script: Central de Combate, Visual & Movimentação 
+--    Versão: 2.7 (Luck Hub - Floating Button Edition)
 -- ]]
 
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-
-local Window = Fluent:CreateWindow({
-    Title = "LUCK HUB 💎",
-    SubTitle = "", -- Removido conforme pedido
-    TabWidth = 160,
-    Size = UDim2.fromOffset(580, 460),
-    Acrylic = true,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
-})
+local Kavo = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Kavo.CreateLib("LUCK BLOXX 💎 - LUCK HUB", "BloodTheme")
 
 -- // Variáveis e Serviços //
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
@@ -47,9 +39,8 @@ FOVCircle.Thickness = 1
 FOVCircle.Color = Color3.fromRGB(0, 255, 255)
 FOVCircle.Transparency = 0.7
 
--- // Tabelas de Objetos Visuais //
+-- // ESP Logic //
 local screenElements = {}
-
 local function CreatePlayerESP(player)
     if screenElements[player] then return end
     screenElements[player] = {
@@ -67,7 +58,7 @@ local function CreatePlayerESP(player)
     e.Tag.Color = Color3.new(1, 1, 1)
 end
 
--- // Loop Principal //
+-- // Main Loop //
 RunService.RenderStepped:Connect(function()
     FOVCircle.Visible = FOVVisible
     FOVCircle.Radius = FOVRadius
@@ -133,7 +124,6 @@ RunService.RenderStepped:Connect(function()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         local hum = LocalPlayer.Character.Humanoid
         hum.WalkSpeed = WalkSpeedEnabled and WalkSpeedValue or 16
-        hum.UseJumpPower = true
         hum.JumpPower = JumpPowerEnabled and JumpPowerValue or 50
     end
 
@@ -152,68 +142,97 @@ end)
 Players.PlayerAdded:Connect(CreatePlayerESP)
 for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then CreatePlayerESP(p) end end
 
--- // TABS //
-local Tabs = {
-    Main = Window:AddTab({ Title = "Combate & Visual", Icon = "crosshair" }),
-    Move = Window:AddTab({ Title = "Movimentação 🏃", Icon = "users" }),
-    Social = Window:AddTab({ Title = "Social 📢", Icon = "users" })
-}
+-- // INTERFACE KAVO //
 
---- // SEÇÃO COMBATE & VISUAL //
-Tabs.Main:AddSection("Aimbot Settings")
+-- Aba Combate & Visual
+local MainTab = Window:NewTab("Combate & Visual")
+local AimbotSection = MainTab:NewSection("Aimbot Settings")
 
-Tabs.Main:AddToggle("AimbotToggle", {Title = "Ativar Aimbot", Default = false, Callback = function(v) AimbotEnabled = v end})
-Tabs.Main:AddToggle("FOVVisible", {Title = "Mostrar Círculo FOV", Default = true, Callback = function(v) FOVVisible = v end})
-Tabs.Main:AddToggle("WallCheck", {Title = "Wall Check (Anti-Parede)", Default = true, Callback = function(v) WallCheck = v end})
-Tabs.Main:AddSlider("FOVRadius", {Title = "FOV do Aimbot", Min = 30, Max = 800, Default = 100, Rounding = 0, Callback = function(v) FOVRadius = v end})
+AimbotSection:NewToggle("Ativar Aimbot", "Mira automaticamente nos inimigos", function(v) AimbotEnabled = v end)
+AimbotSection:NewToggle("Mostrar Círculo FOV", "Exibe a área de alcance da mira", function(v) FOVVisible = v end)
+AimbotSection:NewToggle("Wall Check", "Não mira através de paredes", function(v) WallCheck = v end)
+AimbotSection:NewSlider("FOV do Aimbot", "Aumenta o raio do círculo", 800, 30, function(v) FOVRadius = v end)
 
-Tabs.Main:AddSection("Visual (ESP)")
+local VisualSection = MainTab:NewSection("Visual (ESP)")
+VisualSection:NewToggle("Ativar Visuals (Box)", "Desenha caixas ao redor dos jogadores", function(v) ESPEnabled = v end)
+VisualSection:NewToggle("Mostrar Linhas (Tracers)", "Linhas que ligam você aos jogadores", function(v) ShowTracers = v end)
+VisualSection:NewToggle("Mostrar Nomes", "Mostra o Nickname", function(v) ShowNames = v end)
+VisualSection:NewColorPicker("Cor do ESP", "Muda a cor das linhas e caixas", Color3.fromRGB(0, 255, 255), function(v) ESPColor = v end)
 
-Tabs.Main:AddToggle("ESPToggle", {Title = "Ativar Visuals (Box)", Default = false, Callback = function(v) ESPEnabled = v end})
-Tabs.Main:AddToggle("TracerToggle", {Title = "Mostrar Linhas (Tracers)", Default = true, Callback = function(v) ShowTracers = v end})
-Tabs.Main:AddToggle("NamesToggle", {Title = "Mostrar Nomes (Nicknames)", Default = true, Callback = function(v) ShowNames = v end})
-local ColorPicker = Tabs.Main:AddColorpicker("ESPColor", {Title = "Cor do ESP", Default = Color3.fromRGB(0, 255, 255), Callback = function(v) ESPColor = v end})
+-- Aba Movimentação
+local MoveTab = Window:NewTab("Movimentação")
+local SpeedSection = MoveTab:NewSection("Velocidade & Pulo")
 
---- // SEÇÃO MOVIMENTAÇÃO (ORGANIZADA) //
-Tabs.Move:AddSection("Velocidade ⚡")
-Tabs.Move:AddToggle("SpeedToggle", {Title = "Ativar Speed Mod", Default = false, Callback = function(v) WalkSpeedEnabled = v end})
-Tabs.Move:AddSlider("WalkSpeed", {Title = "Velocidade de Caminhada", Min = 16, Max = 300, Default = 16, Rounding = 0, Callback = function(v) WalkSpeedValue = v end})
+SpeedSection:NewToggle("Ativar Speed Mod", "Habilita a velocidade customizada", function(v) WalkSpeedEnabled = v end)
+SpeedSection:NewSlider("Velocidade (WalkSpeed)", "Padrão é 16", 300, 16, function(v) WalkSpeedValue = v end)
+SpeedSection:NewToggle("Ativar Jump Mod", "Habilita o pulo customizado", function(v) JumpPowerEnabled = v end)
+SpeedSection:NewSlider("Poder do Pulo", "Padrão é 50", 500, 50, function(v) JumpPowerValue = v end)
 
-Tabs.Move:AddSection("Pulo 🆙")
-Tabs.Move:AddToggle("JumpToggle", {Title = "Ativar Jump Mod", Default = false, Callback = function(v) JumpPowerEnabled = v end})
-Tabs.Move:AddSlider("JumpPower", {Title = "Poder do Pulo", Min = 50, Max = 500, Default = 50, Rounding = 0, Callback = function(v) JumpPowerValue = v end})
+local FlySection = MoveTab:NewSection("Voo")
+FlySection:NewToggle("Fly (Voo)", "Permite voar pelo mapa", function(v) FlyEnabled = v end)
+FlySection:NewSlider("Velocidade do Voo", "Velocidade de deslocamento no ar", 500, 10, function(v) FlySpeed = v end)
 
-Tabs.Move:AddSection("Voo ✈️")
-Tabs.Move:AddToggle("FlyToggle", {Title = "Modo Voo (Fly)", Default = false, Callback = function(v) FlyEnabled = v end})
-Tabs.Move:AddSlider("FlySpeed", {Title = "Velocidade do Voo", Min = 10, Max = 500, Default = 50, Rounding = 0, Callback = function(v) FlySpeed = v end})
+-- Aba Social
+local SocialTab = Window:NewTab("Social 📢")
+local SocialSection = SocialTab:NewSection("Comunidade")
 
---- // SEÇÃO SOCIAL //
-Tabs.Social:AddSection("Comunidade")
-Tabs.Social:AddButton({
-    Title = "Entrar No Discord (Clique)",
-    Description = "Copia o link ou tenta abrir o App",
-    Callback = function()
-        local discordInvite = "https://discord.gg/ETzMDSwdt5"
-        local http = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-        
-        if http then
-            http({
-                Url = "http://127.0.0.1:6463/rpc?v=1",
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json", ["Origin"] = "https://discord.com"},
-                Body = HttpService:JSONEncode({
-                    cmd = "INVITE_BROWSER",
-                    args = { code = "ETzMDSwdt5" },
-                    nonce = HttpService:GenerateGUID(false)
-                })
+SocialSection:NewButton("Entrar No Discord (Clique)", "Copia o link ou tenta abrir o App", function()
+    local discordInvite = "https://discord.gg/ETzMDSwdt5"
+    local http = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+    
+    if http then
+        http({
+            Url = "http://127.0.0.1:6463/rpc?v=1",
+            Method = "POST",
+            Headers = { ["Content-Type"] = "application/json", ["Origin"] = "https://discord.com" },
+            Body = HttpService:JSONEncode({
+                cmd = "INVITE_BROWSER",
+                args = { code = "ETzMDSwdt5" },
+                nonce = HttpService:GenerateGUID(false)
             })
-            Fluent:Notify({Title = "Discord", Content = "Tentando abrir convite no App...", Duration = 3})
-        else
-            setclipboard(discordInvite)
-            Fluent:Notify({Title = "Discord", Content = "Link copiado para a área de transferência!", Duration = 5})
+        })
+    else
+        setclipboard(discordInvite)
+    end
+end)
+
+-- // BOTÃO FLUTUANTE //
+local FloatingGui = Instance.new("ScreenGui")
+local MainButton = Instance.new("TextButton")
+local Corner = Instance.new("UICorner")
+local Stroke = Instance.new("UIStroke")
+
+FloatingGui.Name = "LuckHub_Floating"
+FloatingGui.Parent = CoreGui
+FloatingGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+MainButton.Name = "MainButton"
+MainButton.Parent = FloatingGui
+MainButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+MainButton.Position = UDim2.new(0.02, 0, 0.45, 0)
+MainButton.Size = UDim2.new(0, 55, 0, 55)
+MainButton.Font = Enum.Font.GothamBold
+MainButton.Text = "LUCK"
+MainButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MainButton.TextSize = 14
+MainButton.Draggable = true -- Ativa movimentação do botão
+MainButton.Active = true
+
+Corner.CornerRadius = UDim.new(0, 12)
+Corner.Parent = MainButton
+
+Stroke.Color = Color3.fromRGB(255, 255, 255)
+Stroke.Thickness = 1.5
+Stroke.Parent = MainButton
+
+-- Função para Alternar a Visibilidade da UI
+MainButton.MouseButton1Click:Connect(function()
+    -- Procura a ScreenGui da Kavo no CoreGui
+    for _, gui in pairs(CoreGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and (gui:FindFirstChild("Main") or gui:FindFirstChild("Container")) then
+            gui.Enabled = not gui.Enabled
         end
     end
-})
+end)
 
-Window:SelectTab(1)
-Fluent:Notify({ Title = "LUCK HUB", Content = "Painel Fluent carregado!", Duration = 5 })
+print("Luck Hub v2.7 Carregado com Sucesso!")
