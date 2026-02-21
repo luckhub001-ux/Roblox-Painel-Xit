@@ -1,6 +1,6 @@
 -- [[ 
 --    Script: Central de Combate, Visual & Movimentação 
---    Versão: 2.7 (Luck Hub - Floating Button Edition)
+--    Versão: 2.8 (Mobile Optimized - Delta Fix) + Discord Auto-Join
 -- ]]
 
 local Kavo = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
@@ -33,11 +33,56 @@ local JumpPowerValue = 50
 local FlyEnabled = false
 local FlySpeed = 50
 
--- // FOV Circle //
+-- // FUNÇÃO DISCORD OTIMIZADA //
+local function JoinDiscord()
+    local invCode = "8zDTgbZSB3"
+    local invLink = "https://discord.gg/" .. invCode
+    
+    -- Notificação na Interface do Roblox
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "LUCK HUB",
+        Text = "Entre no Discord para atualizações! Link copiado.",
+        Duration = 5
+    })
+
+    -- Copiar para Clipboard (PC e Mobile)
+    if setclipboard then
+        setclipboard(invLink)
+    end
+
+    -- Auto-Join RPC (Somente PC)
+    task.spawn(function()
+        for i = 6463, 6472 do
+            local success = pcall(function()
+                local req = (syn and syn.request) or (http and http.request) or http_request or request
+                if req then
+                    req({
+                        Url = "http://127.0.0.1:"..tostring(i).."/rpc?v=1",
+                        Method = "POST",
+                        Headers = {
+                            ["Content-Type"] = "application/json",
+                            ["Origin"] = "https://discord.com"
+                        },
+                        Body = HttpService:JSONEncode({
+                            cmd = "INVITE_BROWSER",
+                            args = {code = invCode},
+                            nonce = HttpService:GenerateGUID(false)
+                        }),
+                    })
+                end
+            end)
+            if success then break end
+        end
+    end)
+end
+
+-- // FOV Circle (AJUSTADO PARA MOBILE/DELTA) //
 local FOVCircle = Drawing.new("Circle")
-FOVCircle.Thickness = 1
+FOVCircle.Thickness = 1.5
 FOVCircle.Color = Color3.fromRGB(0, 255, 255)
-FOVCircle.Transparency = 0.7
+FOVCircle.Transparency = 1
+FOVCircle.Filled = false
+FOVCircle.Visible = false
 
 -- // ESP Logic //
 local screenElements = {}
@@ -143,8 +188,6 @@ Players.PlayerAdded:Connect(CreatePlayerESP)
 for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then CreatePlayerESP(p) end end
 
 -- // INTERFACE KAVO //
-
--- Aba Combate & Visual
 local MainTab = Window:NewTab("Combate & Visual")
 local AimbotSection = MainTab:NewSection("Aimbot Settings")
 
@@ -159,10 +202,8 @@ VisualSection:NewToggle("Mostrar Linhas (Tracers)", "Linhas que ligam você aos 
 VisualSection:NewToggle("Mostrar Nomes", "Mostra o Nickname", function(v) ShowNames = v end)
 VisualSection:NewColorPicker("Cor do ESP", "Muda a cor das linhas e caixas", Color3.fromRGB(0, 255, 255), function(v) ESPColor = v end)
 
--- Aba Movimentação
 local MoveTab = Window:NewTab("Movimentação")
 local SpeedSection = MoveTab:NewSection("Velocidade & Pulo")
-
 SpeedSection:NewToggle("Ativar Speed Mod", "Habilita a velocidade customizada", function(v) WalkSpeedEnabled = v end)
 SpeedSection:NewSlider("Velocidade (WalkSpeed)", "Padrão é 16", 300, 16, function(v) WalkSpeedValue = v end)
 SpeedSection:NewToggle("Ativar Jump Mod", "Habilita o pulo customizado", function(v) JumpPowerEnabled = v end)
@@ -172,31 +213,28 @@ local FlySection = MoveTab:NewSection("Voo")
 FlySection:NewToggle("Fly (Voo)", "Permite voar pelo mapa", function(v) FlyEnabled = v end)
 FlySection:NewSlider("Velocidade do Voo", "Velocidade de deslocamento no ar", 500, 10, function(v) FlySpeed = v end)
 
--- Aba Social
-local SocialTab = Window:NewTab("Social 📢")
-local SocialSection = SocialTab:NewSection("Comunidade")
+-- // NOVA ABA INFO & DISCORD //
+local InfoTab = Window:NewTab("Info / Suporte")
+local DiscordSection = InfoTab:NewSection("Comunidade")
 
-SocialSection:NewButton("Entrar No Discord (Clique)", "Copia o link ou tenta abrir o App", function()
-    local discordInvite = "https://discord.gg/ETzMDSwdt5"
-    local http = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-    
-    if http then
-        http({
-            Url = "http://127.0.0.1:6463/rpc?v=1",
-            Method = "POST",
-            Headers = { ["Content-Type"] = "application/json", ["Origin"] = "https://discord.com" },
-            Body = HttpService:JSONEncode({
-                cmd = "INVITE_BROWSER",
-                args = { code = "ETzMDSwdt5" },
-                nonce = HttpService:GenerateGUID(false)
-            })
-        })
-    else
-        setclipboard(discordInvite)
+DiscordSection:NewButton("Discord / Suporte", "Copia o link e entra automaticamente (PC)", function()
+    JoinDiscord()
+end)
+
+DiscordSection:NewLabel("Versão Atual: 2.8")
+
+-- // CENTRALIZAÇÃO AUTOMÁTICA DA UI //
+task.spawn(function()
+    wait(0.5)
+    for _, gui in pairs(CoreGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui:FindFirstChild("Main") then
+            local MainFrame = gui.Main
+            MainFrame.Position = UDim2.new(0.5, -MainFrame.Size.X.Offset/2, 0.5, -MainFrame.Size.Y.Offset/2)
+        end
     end
 end)
 
--- // BOTÃO FLUTUANTE //
+-- // BOTÃO FLUTUANTE OTIMIZADO //
 local FloatingGui = Instance.new("ScreenGui")
 local MainButton = Instance.new("TextButton")
 local Corner = Instance.new("UICorner")
@@ -209,30 +247,32 @@ FloatingGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 MainButton.Name = "MainButton"
 MainButton.Parent = FloatingGui
 MainButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-MainButton.Position = UDim2.new(0.02, 0, 0.45, 0)
-MainButton.Size = UDim2.new(0, 55, 0, 55)
+MainButton.Position = UDim2.new(0.1, 0, 0.2, 0)
+MainButton.Size = UDim2.new(0, 60, 0, 60)
 MainButton.Font = Enum.Font.GothamBold
 MainButton.Text = "LUCK"
 MainButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 MainButton.TextSize = 14
-MainButton.Draggable = true -- Ativa movimentação do botão
 MainButton.Active = true
+MainButton.Draggable = true 
 
-Corner.CornerRadius = UDim.new(0, 12)
+Corner.CornerRadius = UDim.new(0, 30) 
 Corner.Parent = MainButton
 
 Stroke.Color = Color3.fromRGB(255, 255, 255)
-Stroke.Thickness = 1.5
+Stroke.Thickness = 2
 Stroke.Parent = MainButton
 
--- Função para Alternar a Visibilidade da UI
+-- Toggle Visibility
 MainButton.MouseButton1Click:Connect(function()
-    -- Procura a ScreenGui da Kavo no CoreGui
     for _, gui in pairs(CoreGui:GetChildren()) do
-        if gui:IsA("ScreenGui") and (gui:FindFirstChild("Main") or gui:FindFirstChild("Container")) then
+        if gui:IsA("ScreenGui") and gui:FindFirstChild("Main") then
             gui.Enabled = not gui.Enabled
         end
     end
 end)
 
-print("Luck Hub v2.7 Carregado com Sucesso!")
+-- Executar função de Discord ao carregar
+JoinDiscord()
+
+print("Luck Hub v2.8 Mobile Fix + Discord Carregado!")
